@@ -1,4 +1,4 @@
-module github.com/justficks/gogammu
+module github.com/justficks/gogammu/v2
 
 go 1.20
 
