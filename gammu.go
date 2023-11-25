@@ -25,7 +25,7 @@ type Gammu struct {
 	DB    *pg.DB
 }
 
-func NewGammu(appDir, dbAddr, dbUser, dbPass, dbName string) (*Gammu, error) {
+func NewGammu(appDir, appHttpPort, dbAddr, dbUser, dbPass, dbName string) (*Gammu, error) {
 	cfgDir := filepath.Join(appDir, "configs")
 	pidDir := filepath.Join(appDir, "pids")
 	logDir := filepath.Join(appDir, "logs")
@@ -47,7 +47,7 @@ func NewGammu(appDir, dbAddr, dbUser, dbPass, dbName string) (*Gammu, error) {
 	}
 
 	scriptPath := filepath.Join(appDir, "notify.sh")
-	err := CreateNotifyScript(scriptPath)
+	err := CreateNotifyScript(scriptPath, appHttpPort)
 	if err != nil {
 		return nil, fmt.Errorf("create %s error %s", scriptPath, err)
 	}

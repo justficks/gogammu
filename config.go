@@ -86,11 +86,11 @@ func ParseNotify(input string) (*Notify, error) {
 	}
 }
 
-func CreateNotifyScript(scriptPath string) error {
+func CreateNotifyScript(scriptPath, appHttpPort string) error {
 	parts := []string{
 		"#!/bin/bash",
 		"args=\"$@\"",
-		"curl -d \"$args\" http://localhost:3000/notify",
+		"curl -d \"$args\" http://localhost:" + appHttpPort + "/notify",
 	}
 	content := strings.Join(parts, "\n")
 
