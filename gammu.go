@@ -66,9 +66,10 @@ func NewGammu(appDir, dbAddr, dbUser, dbPass, dbName string) (*Gammu, error) {
 		LogDir: filepath.Join(appDir, "./logs"),
 		Script: scriptPath,
 
-		DbHost: "localhost:5432",
-		DbUser: "smsd",
-		DbPass: "eeYYbkY3ponR5ZQ",
+		// Required for gammu configs
+		DbHost: dbAddr,
+		DbUser: dbUser,
+		DbPass: dbPass,
 
 		Store: GetStore(),
 		DB:    DbConnection,
