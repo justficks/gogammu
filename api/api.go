@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/gofiber/fiber/v2"
 	gammu "github.com/justficks/gogammu"
 )
@@ -11,6 +12,10 @@ type Api struct {
 
 func New(gammuInstance *gammu.Gammu) (api *Api) {
 	app := fiber.New()
+
+	prometheus := fiberprometheus.New("my-service-name")
+	prometheus.RegisterAt(app, "/metrics")
+	app.Use(prometheus.Middleware)
 
 	h := &Handler{Gammu: gammuInstance}
 
