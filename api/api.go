@@ -3,19 +3,25 @@ package api
 import (
 	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	gammu "github.com/justficks/gogammu"
+	slogfiber "github.com/samber/slog-fiber"
+	"log/slog"
 )
 
 type Api struct {
-	GammuFiber *fiber.App
+	Fiber *fiber.App
 }
 
-func New(gammuInstance *gammu.Gammu) (api *Api) {
+func New(gammuInstance *gammu.Gammu, logger *slog.Logger) (api *Api) {
 	app := fiber.New()
 
 	prometheus := fiberprometheus.New("my-service-name")
 	prometheus.RegisterAt(app, "/metrics")
 	app.Use(prometheus.Middleware)
+
+	app.Use(cors.New())
+	app.Use(slogfiber.New(logger))
 
 	h := &Handler{Gammu: gammuInstance}
 
@@ -45,7 +51,20 @@ func New(gammuInstance *gammu.Gammu) (api *Api) {
 	app.Get("/modems/stop", h.StopAll)
 	app.Get("/modems/pids", h.GetAllPids)
 
+	app.Get("/globe/run", h.GlobeRun)
+	app.Get("/reset-store", h.ResetStore)
+
+	app.Get("/sms/inbox", h.GetInbox)
+	app.Get("/sms/outbox", h.GetOutbox)
+	app.Delete("/sms/inbox/:id", h.DeleteInboxSMS)
+	app.Delete("/sms/outbox/:id", h.DeleteOutboxSMS)
+	app.Get("/phones", h.GetPhones)
+	app.Get("/phones-imsi", h.GetPhoneToIMSI)
+	app.Patch("/phones-imsi/:id/phone", h.UpdatePhoneToIMSI)
+	app.Post("/phones-imsi", h.AddPhoneToIMSI)
+	app.Delete("/phones-imsi/:id", h.DeletePhoneToIMSI)
+
 	return &Api{
-		GammuFiber: app,
+		Fiber: app,
 	}
 }

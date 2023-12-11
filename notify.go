@@ -21,7 +21,7 @@ func (g *Gammu) ConcatSMS(n *Notify) (string, error) {
 
 	phoneNumber := n.PhoneID
 
-	var model PhoneToIMSI
+	var model PhonesIMSI
 	err = g.DB.Model(&model).Where("\"IMSI\" = ?", n.PhoneID).Select()
 	if err == nil && model.Phone != "" {
 		phoneNumber = model.Phone

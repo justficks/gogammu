@@ -1,10 +1,8 @@
 --
 -- Database: "smsd"
 --
-CREATE USER "smsd" WITH NOCREATEDB NOCREATEUSER;
-CREATE DATABASE "smsd" WITH OWNER = "smsd" ENCODING = 'UTF8';
-\connect "smsd" "smsd"
-COMMENT ON DATABASE "smsd" IS 'Gammu SMSD Database';
+-- CREATE USER "smsd" WITH NOCREATEDB NOCREATEROLE;
+-- CREATE DATABASE "smsd" WITH OWNER = "smsd" ENCODING = 'UTF8';
 
 -- --------------------------------------------------------
 
@@ -32,20 +30,6 @@ CREATE SEQUENCE outbox_ID_seq;
 CREATE SEQUENCE outbox_multipart_ID_seq;
 
 CREATE SEQUENCE sentitems_ID_seq;
-
--- --------------------------------------------------------
-
---
--- Index declarations for tables' primary keys
---
-
-CREATE UNIQUE INDEX inbox_pkey ON inbox USING btree ("ID");
-
-CREATE UNIQUE INDEX outbox_pkey ON outbox USING btree ("ID");
-
-CREATE UNIQUE INDEX outbox_multipart_pkey ON outbox_multipart USING btree ("ID");
-
-CREATE UNIQUE INDEX sentitems_pkey ON sentitems USING btree ("ID");
 
 -- --------------------------------------------------------
 
@@ -267,3 +251,24 @@ CREATE INDEX sentitems_sender ON sentitems("SenderID");
 --
 
 CREATE TRIGGER update_timestamp BEFORE UPDATE ON sentitems FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+
+
+CREATE TABLE phones_imsi (
+                               "ID" serial PRIMARY KEY,
+                               "IMSI" varchar(255) NOT NULL,
+                               "Phone" varchar(255) NOT NULL
+);
+
+--
+-- Index declarations for tables' primary keys
+--
+
+CREATE UNIQUE INDEX inbox_pkey ON inbox USING btree ("ID");
+
+CREATE UNIQUE INDEX outbox_pkey ON outbox USING btree ("ID");
+
+CREATE UNIQUE INDEX outbox_multipart_pkey ON outbox_multipart USING btree ("ID");
+
+CREATE UNIQUE INDEX sentitems_pkey ON sentitems USING btree ("ID");
+
+-- --------------------------------------------------------

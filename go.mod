@@ -1,11 +1,12 @@
 module github.com/justficks/gogammu
 
-go 1.20
+go 1.21
 
 require (
 	github.com/ansrivas/fiberprometheus/v2 v2.6.1
 	github.com/go-pg/pg/v10 v10.11.2
 	github.com/gofiber/fiber/v2 v2.51.0
+	github.com/samber/slog-fiber v1.8.0
 )
 
 require (
@@ -35,6 +36,8 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.4 // indirect
 	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+	go.opentelemetry.io/otel v1.19.0 // indirect
+	go.opentelemetry.io/otel/trace v1.19.0 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/sys v0.14.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect

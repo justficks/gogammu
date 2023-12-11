@@ -25,17 +25,6 @@ type Gammu struct {
 	DB    *pg.DB
 }
 
-func executeSQLFromFile(db *pg.DB, filename string) error {
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-
-	sql := string(content)
-	_, err = db.Exec(sql)
-	return err
-}
-
 func NewGammu(appDir, appHttpPort, dbAddr, dbUser, dbPass, dbName string) (*Gammu, error) {
 	cfgDir := filepath.Join(appDir, "configs")
 	pidDir := filepath.Join(appDir, "pids")
@@ -74,12 +63,6 @@ func NewGammu(appDir, appHttpPort, dbAddr, dbUser, dbPass, dbName string) (*Gamm
 	_, err = DbConnection.Exec("SELECT 1")
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %v", err)
-	}
-
-	// Выполнение SQL-кода из файла
-	err = executeSQLFromFile(DbConnection, "gammu-pg.sql")
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute SQL file: %v", err)
 	}
 
 	return &Gammu{

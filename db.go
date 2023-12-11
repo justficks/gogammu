@@ -65,20 +65,36 @@ type Phones struct {
 	Received     int       `pg:"Received,default:0,notnull"`
 }
 
-type PhoneToIMSI struct {
-	tableName struct{} `pg:"custom"`
+type PhonesIMSI struct {
+	tableName struct{} `pg:"phones_imsi"`
 	ID        int      `pg:"ID,notnull"`
 	IMSI      string   `pg:"IMSI,notnull"`
 	Phone     string   `pg:"Phone,notnull"`
 }
 
-func (g *Gammu) GetInbox() ([]Inbox, error) {
+func (g *Gammu) GetInbox(page int, pageSize int) ([]Inbox, error) {
 	var items []Inbox
-	err := g.DB.Model(&items).Where("\"TextDecoded\" != ?", "").Select()
+	offset := (page - 1) * pageSize
+	err := g.DB.Model(&items).
+		Where("\"TextDecoded\" != ?", "").
+		Order("ID DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Select()
 	if err != nil {
 		return nil, err
 	}
 	return items, err
+}
+
+func (g *Gammu) GetInboxCount() (int, error) {
+	count, err := g.DB.Model((*Inbox)(nil)).
+		Where("\"TextDecoded\" != ?", "").
+		Count()
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (g *Gammu) DeleteInbox(id int) error {
@@ -126,8 +142,8 @@ func (g *Gammu) GetPhones() ([]Phones, error) {
 	return items, err
 }
 
-func (g *Gammu) GetPhonesIMSI() ([]PhoneToIMSI, error) {
-	var items []PhoneToIMSI
+func (g *Gammu) GetPhonesIMSI() ([]PhonesIMSI, error) {
+	var items []PhonesIMSI
 	err := g.DB.Model(&items).Select()
 	if err != nil {
 		return nil, err
@@ -135,7 +151,7 @@ func (g *Gammu) GetPhonesIMSI() ([]PhoneToIMSI, error) {
 	return items, err
 }
 
-func (g *Gammu) AddPhoneIMSI(input PhoneToIMSI) error {
+func (g *Gammu) AddPhoneIMSI(input PhonesIMSI) error {
 	if input.Phone == "" || input.IMSI == "" {
 		return fmt.Errorf("phone or IMSI is empty")
 	}
@@ -147,7 +163,7 @@ func (g *Gammu) AddPhoneIMSI(input PhoneToIMSI) error {
 }
 
 func (g *Gammu) UpdatePhoneIMSI(id int, newPhone string) error {
-	var phone PhoneToIMSI
+	var phone PhonesIMSI
 	_, err := g.DB.Model(&phone).Set("\"Phone\" = ?", newPhone).Where("\"ID\" = ?", id).Update()
 	if err != nil {
 		return err
@@ -156,7 +172,7 @@ func (g *Gammu) UpdatePhoneIMSI(id int, newPhone string) error {
 }
 
 func (g *Gammu) DeletePhoneIMSI(id int) error {
-	phone := &PhoneToIMSI{ID: id}
+	phone := &PhonesIMSI{ID: id}
 	_, err := g.DB.Model(phone).Where("\"ID\" = ?", id).Delete()
 	if err != nil {
 		return err
