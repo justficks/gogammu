@@ -2,6 +2,7 @@ package gammu
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,6 +32,8 @@ type Gammu struct {
 
 	Store *Store
 	DB    *pg.DB
+
+	log *slog.Logger
 }
 
 type ConfigNewGammu struct {
@@ -43,6 +46,8 @@ type ConfigNewGammu struct {
 	DbName string
 
 	OnMsgCallback func(msg *NewMsg) error
+
+	Logger *slog.Logger
 }
 
 func NewGammu(cfg ConfigNewGammu) (*Gammu, error) {
@@ -110,6 +115,8 @@ func NewGammu(cfg ConfigNewGammu) (*Gammu, error) {
 
 		Store: GetStore(),
 		DB:    DbConnection,
+
+		log: cfg.Logger,
 	}, nil
 }
 
@@ -201,6 +208,11 @@ func (g *Gammu) GlobeRun() error {
 }
 
 func (g *Gammu) Run(m *Modem) error {
+	err := g.DeleteMonitor(m.IMSI)
+	if err != nil {
+		g.log.Error("Gammu -> Run. Error remove row from DB before start", slog.Any("err", err))
+	}
+
 	g.Store.SetModemStatus(m.Num, Init)
 	identify, err := Identify(m.Num)
 	if err != nil {

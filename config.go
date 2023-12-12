@@ -37,9 +37,9 @@ func (g *Gammu) ConfigContent(device, modemId string) string {
 		"LogFile = " + filepath.Join(g.LogDir, modemId),
 		"PhoneId = " + modemId,
 		"MultipartTimeout = 120",
-		"RunOnReceive = " + g.RunOnMsgScript + modemId,
-		"RunOnFailure = " + g.RunOnErrScript + modemId,
-		"RunOnCall = " + g.RunOnCallScript + modemId,
+		"RunOnReceive = " + g.RunOnMsgScript + " " + modemId,
+		"RunOnFailure = " + g.RunOnErrScript + " " + modemId,
+		"RunOnCall = " + g.RunOnCallScript + " " + modemId,
 	}
 	return strings.Join(parts, "\n")
 }

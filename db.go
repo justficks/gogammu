@@ -48,7 +48,7 @@ type Sentitems struct {
 
 type Phones struct {
 	tableName    struct{}  `pg:"phones"`
-	ID           int       `pg:"ID,notnull"`
+	ID           string    `pg:"ID,notnull"`
 	UpdatedInDB  time.Time `pg:"UpdatedInDB,default:now()"`
 	InsertIntoDB time.Time `pg:"InsertIntoDB,default:now()"`
 	TimeOut      time.Time `pg:"TimeOut,default:now()"`
@@ -106,9 +106,9 @@ func (g *Gammu) DeleteInbox(id int) error {
 	return nil
 }
 
-func (g *Gammu) DeleteMonitor(id int) error {
+func (g *Gammu) DeleteMonitor(id string) error {
 	inbox := &Phones{ID: id}
-	_, err := g.DB.Model(inbox).Where("\"ID\" = ?::text", id).Delete()
+	_, err := g.DB.Model(inbox).Where("\"ID\" = ?", id).Delete()
 	if err != nil {
 		return err
 	}

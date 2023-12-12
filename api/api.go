@@ -4,8 +4,8 @@ import (
 	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	gammu "github.com/justficks/gogammu"
-	slogfiber "github.com/samber/slog-fiber"
 	"log/slog"
 )
 
@@ -21,7 +21,8 @@ func New(gammuInstance *gammu.Gammu, logger *slog.Logger) (api *Api) {
 	app.Use(prometheus.Middleware)
 
 	app.Use(cors.New())
-	app.Use(slogfiber.New(logger))
+	app.Use(LoggerMiddleware(logger))
+	app.Use(recover.New())
 
 	h := &Handler{Gammu: gammuInstance, log: logger}
 

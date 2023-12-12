@@ -5,7 +5,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	gammu "github.com/justficks/gogammu"
 	"log/slog"
-	"time"
 )
 
 type Handler struct {
@@ -48,6 +47,11 @@ func (h *Handler) RunOnError(c *fiber.Ctx) error {
 		return c.Status(400).SendString(fmt.Sprintf("Modem %s not found", notify.PhoneID))
 	}
 
+	err = h.Gammu.DeleteMonitor(modem.IMSI)
+	if err != nil {
+		log.Error("Error remove row from phones table", slog.Any("err", err))
+	}
+
 	err = h.Gammu.Stop(modem.IMSI)
 	if err != nil {
 		log.Error("Stop gammu-smsd error", err)
@@ -73,18 +77,18 @@ func (h *Handler) RunOnMessage(c *fiber.Ctx) error {
 
 	log.Info("Income body", body)
 
-	_, err := gammu.ParseRunOnMsgBody(body)
+	notify, err := gammu.ParseRunOnMsgBody(body)
 	if err != nil {
 		log.Error("Parse body error", err)
 		return c.Status(400).SendString(err.Error())
 	}
 
-	//newMsg, err := h.Gammu.ConcatSMS(notify)
-	//if err != nil {
-	//	return fiber.NewError(400, err.Error())
-	//}
+	newMsg, err := h.Gammu.ConcatSMS(notify)
+	if err != nil {
+		return fiber.NewError(400, err.Error())
+	}
 
-	err = h.Gammu.OnMsgCallback(&gammu.NewMsg{Phone: "201290129", Text: "test test", From: "some gay", Date: time.Now()})
+	err = h.Gammu.OnMsgCallback(newMsg)
 	if err != nil {
 		return fiber.NewError(400, err.Error())
 	}

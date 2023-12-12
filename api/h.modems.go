@@ -3,7 +3,6 @@ package api
 import (
 	"github.com/gofiber/fiber/v2"
 	gammu "github.com/justficks/gogammu"
-	"strconv"
 )
 
 func (h *Handler) GetAllModems(c *fiber.Ctx) error {
@@ -44,11 +43,8 @@ func (h *Handler) MonitorAll(c *fiber.Ctx) error {
 }
 
 func (h *Handler) DeleteMonitor(c *fiber.Ctx) error {
-	id, err := strconv.Atoi(c.Params("id"))
-	if err != nil {
-		return fiber.NewError(400, "Parameter :id must be a number.")
-	}
-	err = h.Gammu.DeleteMonitor(id)
+	id := c.Params("id")
+	err := h.Gammu.DeleteMonitor(id)
 	if err != nil {
 		return c.Status(500).SendString(err.Error())
 	}
