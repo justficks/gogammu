@@ -15,7 +15,7 @@ type ModemRun struct {
 	Error       string
 }
 
-func (g *Gammu) Run(modem *Modem) error {
+func (g *Gammu) RunSMSD(modem *Modem) error {
 	_, cfgPath, err := g.CreateConfig(modem)
 	if err != nil {
 		return fmt.Errorf("create config error: %s", err)
@@ -40,7 +40,7 @@ func (g *Gammu) RunAll(modems map[int]*Modem) []ModemRun {
 		i := modem
 		go func() {
 			defer wg.Done()
-			err := g.Run(i)
+			err := g.RunSMSD(i)
 			if err == nil {
 				ch <- ModemRun{ModemNumber: i.Num, Run: true}
 			} else {

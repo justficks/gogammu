@@ -2,36 +2,56 @@ package gammu
 
 import (
 	"fmt"
-	"github.com/go-pg/pg/v10"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"sync"
+
+	"github.com/go-pg/pg/v10"
 )
 
 type Gammu struct {
-	AppDir string
+	AppDir  string
+	AppPort int
+
 	CfgDir string
 	PidDir string
 	LogDir string
-	Script string // path to notify.sh
 
 	DbHost string
 	DbUser string
 	DbPass string
 
+	RunOnMsgScript  string
+	RunOnErrScript  string
+	RunOnCallScript string
+
+	OnMsgCallback func(msg *NewMsg) error
+
 	Store *Store
 	DB    *pg.DB
 }
 
-func NewGammu(appDir, appHttpPort, dbAddr, dbUser, dbPass, dbName string) (*Gammu, error) {
-	cfgDir := filepath.Join(appDir, "configs")
-	pidDir := filepath.Join(appDir, "pids")
-	logDir := filepath.Join(appDir, "logs")
+type ConfigNewGammu struct {
+	AppDir  string
+	AppPort string
+
+	DbHost string
+	DbUser string
+	DbPass string
+	DbName string
+
+	OnMsgCallback func(msg *NewMsg) error
+}
+
+func NewGammu(cfg ConfigNewGammu) (*Gammu, error) {
+	cfgDir := filepath.Join(cfg.AppDir, "configs")
+	pidDir := filepath.Join(cfg.AppDir, "pids")
+	logDir := filepath.Join(cfg.AppDir, "logs")
 
 	dirs := []string{
-		appDir,
+		cfg.AppDir,
 		cfgDir,
 		pidDir,
 		logDir,
@@ -46,36 +66,47 @@ func NewGammu(appDir, appHttpPort, dbAddr, dbUser, dbPass, dbName string) (*Gamm
 		}
 	}
 
-	scriptPath := filepath.Join(appDir, "notify.sh")
-	err := CreateNotifyScript(scriptPath, appHttpPort)
-	if err != nil {
-		return nil, fmt.Errorf("create %s error %s", scriptPath, err)
+	runOnScripts := map[string]string{
+		"msg":  filepath.Join(cfg.AppDir, "runOnMsg.sh"),
+		"err":  filepath.Join(cfg.AppDir, "runOnErr.sh"),
+		"call": filepath.Join(cfg.AppDir, "runOnCall.sh"),
+	}
+	for eventType, scriptPath := range runOnScripts {
+		err := CreateRunOnScript(scriptPath, cfg.AppPort, eventType)
+		if err != nil {
+			return nil, fmt.Errorf("create %s error %s", scriptPath, err)
+		}
 	}
 
 	DbConnection := pg.Connect(&pg.Options{
-		Addr:     dbAddr,
-		User:     dbUser,
-		Password: dbPass,
-		Database: dbName,
+		Addr:     cfg.DbHost,
+		User:     cfg.DbUser,
+		Password: cfg.DbPass,
+		Database: cfg.DbName,
 	})
 
-	// Проверка соединения
-	_, err = DbConnection.Exec("SELECT 1")
+	// Проверка соединения с БД
+	_, err := DbConnection.Exec("SELECT 1")
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %v", err)
 	}
 
 	return &Gammu{
-		AppDir: appDir,
-		CfgDir: filepath.Join(appDir, "./configs"),
-		PidDir: filepath.Join(appDir, "./pids"),
-		LogDir: filepath.Join(appDir, "./logs"),
-		Script: scriptPath,
+		AppDir: cfg.AppDir,
+		CfgDir: cfgDir,
+		PidDir: pidDir,
+		LogDir: logDir,
 
 		// Required for gammu configs
-		DbHost: dbAddr,
-		DbUser: dbUser,
-		DbPass: dbPass,
+		DbHost: cfg.DbHost,
+		DbUser: cfg.DbUser,
+		DbPass: cfg.DbPass,
+
+		RunOnMsgScript:  runOnScripts["msg"],
+		RunOnErrScript:  runOnScripts["err"],
+		RunOnCallScript: runOnScripts["call"],
+
+		OnMsgCallback: cfg.OnMsgCallback,
 
 		Store: GetStore(),
 		DB:    DbConnection,
@@ -90,6 +121,8 @@ const (
 	Error ModemStatus = "error"
 	NoSIM ModemStatus = "no-sim"
 	Init  ModemStatus = "init"
+
+	NetworkError ModemStatus = "network-error"
 )
 
 type Modem struct {
@@ -156,42 +189,48 @@ func (g *Gammu) GlobeRun() error {
 	for _, m := range g.Store.modems {
 		wg.Add(1)
 		modem := m
-		modemNum := m.Num
-		go func(id int) {
+		go func() {
 			defer wg.Done()
-			g.Store.SetModemStatus(modemNum, Init)
-			identify, err := Identify(modemNum)
-			if err != nil {
-				g.Store.SetModemStatus(modemNum, Error)
-				g.Store.SetModemError(modemNum, err.Error())
-				return
-			}
-			if identify.ErrorCode == 114 {
-				g.Store.SetModemStatus(modemNum, NoSIM)
-				return
-			}
-			g.Store.SetModemIdentify(identify)
-			network, err := Network(modemNum)
-			if err != nil {
-				g.Store.SetModemStatus(modemNum, Error)
-				g.Store.SetModemError(modemNum, err.Error())
-				return
-			}
-			if network.NetworkState == "not logged into network" {
-				g.Store.SetModemStatus(modemNum, Error)
-				g.Store.SetModemError(modemNum, "not logged into network")
-				return
-			}
-			g.Store.SetModemNetwork(modemNum, network)
-			err = g.Run(modem)
-			if err != nil {
-				g.Store.SetModemStatus(modemNum, Error)
-			}
-			g.Store.SetModemStatus(modemNum, Run)
-		}(modemNum)
+			_ = g.Run(modem)
+		}()
 	}
 
 	wg.Wait()
 
+	return nil
+}
+
+func (g *Gammu) Run(m *Modem) error {
+	g.Store.SetModemStatus(m.Num, Init)
+	identify, err := Identify(m.Num)
+	if err != nil {
+		g.Store.SetModemStatus(m.Num, Error)
+		g.Store.SetModemError(m.Num, err.Error())
+		return err
+	}
+	if identify.ErrorCode == 114 {
+		g.Store.SetModemStatus(m.Num, NoSIM)
+		return fmt.Errorf("no sim card in modem %d", m.Num)
+	}
+	g.Store.SetModemIdentify(identify)
+	network, err := Network(m.Num)
+	if err != nil {
+		g.Store.SetModemStatus(m.Num, Error)
+		g.Store.SetModemError(m.Num, err.Error())
+		return err
+	}
+	if network.NetworkState == "not logged into network" || network.NetworkState == "request to network denied" {
+		g.Store.SetModemStatus(m.Num, NetworkError)
+		g.Store.SetModemError(m.Num, "Registration to network error")
+		return fmt.Errorf("registration to network error")
+	}
+	g.Store.SetModemNetwork(m.Num, network)
+	err = g.RunSMSD(m)
+	if err != nil {
+		g.Store.SetModemStatus(m.Num, Error)
+		g.Store.SetModemError(m.Num, err.Error())
+		return err
+	}
+	g.Store.SetModemStatus(m.Num, Run)
 	return nil
 }

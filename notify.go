@@ -6,15 +6,22 @@ import (
 	"time"
 )
 
-func (g *Gammu) ConcatSMS(n *Notify) (string, error) {
+type NewMsg struct {
+	Phone string // Phone Number or SIM IMSI
+	Text  string
+	Date  time.Time
+	From  string
+}
+
+func (g *Gammu) ConcatSMS(n *RunOnMsgBody) (*NewMsg, error) {
 	var messages []Inbox
 	err := g.DB.Model(&messages).Where("\"ID\" in (?)", pg.In(n.MessageIDs)).Select()
 	if err != nil {
-		return "", fmt.Errorf("неудача получения сообщений с id: %s по причине: %s", n.MessageIDs, err.Error())
+		return nil, fmt.Errorf("неудача получения сообщений с id: %s по причине: %s", n.MessageIDs, err.Error())
 	}
 
 	if len(messages) == 0 {
-		return "", fmt.Errorf("сообщения в базе данных не найдены %s %s", n.PhoneID, n.MessageIDs)
+		return nil, fmt.Errorf("сообщения в базе данных не найдены %s %s", n.PhoneID, n.MessageIDs)
 	}
 
 	m := messages[0]
@@ -32,13 +39,15 @@ func (g *Gammu) ConcatSMS(n *Notify) (string, error) {
 		}
 	}
 
-	smsTime := m.ReceivingDateTime.Add(7 * time.Hour).Format("2006.01.02 15:04:05")
-	smsFromTo := fmt.Sprintf("%s  >  %s", m.SenderNumber, phoneNumber)
-
-	combinedText := fmt.Sprintf("%s\n%s\n\n", smsTime, smsFromTo)
+	text := ""
 	for _, message := range messages {
-		combinedText += message.TextDecoded + " "
+		text += message.TextDecoded + " "
 	}
 
-	return combinedText, nil
+	return &NewMsg{
+		Phone: phoneNumber,
+		Text:  text,
+		Date:  m.ReceivingDateTime,
+		From:  m.SenderNumber,
+	}, nil
 }

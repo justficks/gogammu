@@ -23,7 +23,7 @@ func New(gammuInstance *gammu.Gammu, logger *slog.Logger) (api *Api) {
 	app.Use(cors.New())
 	app.Use(slogfiber.New(logger))
 
-	h := &Handler{Gammu: gammuInstance}
+	h := &Handler{Gammu: gammuInstance, log: logger}
 
 	modem := app.Group("/modem/:num", h.ModemMiddleware)
 	modem.Get("/", h.GetModem)
@@ -58,11 +58,16 @@ func New(gammuInstance *gammu.Gammu, logger *slog.Logger) (api *Api) {
 	app.Get("/sms/outbox", h.GetOutbox)
 	app.Delete("/sms/inbox/:id", h.DeleteInboxSMS)
 	app.Delete("/sms/outbox/:id", h.DeleteOutboxSMS)
+
 	app.Get("/phones", h.GetPhones)
+
 	app.Get("/phones-imsi", h.GetPhoneToIMSI)
 	app.Patch("/phones-imsi/:id/phone", h.UpdatePhoneToIMSI)
 	app.Post("/phones-imsi", h.AddPhoneToIMSI)
 	app.Delete("/phones-imsi/:id", h.DeletePhoneToIMSI)
+
+	app.Post("/run-on/err", h.RunOnError)
+	app.Post("/run-on/msg", h.RunOnMessage)
 
 	return &Api{
 		Fiber: app,

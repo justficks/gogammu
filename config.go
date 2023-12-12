@@ -37,60 +37,54 @@ func (g *Gammu) ConfigContent(device, modemId string) string {
 		"LogFile = " + filepath.Join(g.LogDir, modemId),
 		"PhoneId = " + modemId,
 		"MultipartTimeout = 120",
-		"RunOnReceive = " + g.Script + " msg " + modemId,
-		"RunOnFailure = " + g.Script + " err " + modemId,
-		"RunOnCall = " + g.Script + " call " + modemId,
+		"RunOnReceive = " + g.RunOnMsgScript + modemId,
+		"RunOnFailure = " + g.RunOnErrScript + modemId,
+		"RunOnCall = " + g.RunOnCallScript + modemId,
 	}
 	return strings.Join(parts, "\n")
 }
 
-type Notify struct {
-	Type       string
-	PhoneID    string // IMSI of SIM card
-	MessageIDs []string
-	ErrorType  string
-	CallArg    []string
+type RunOnErrBody struct {
+	PhoneID  string // IMSI of SIM card
+	ErrorArg []string
 }
 
-func ParseNotify(input string) (*Notify, error) {
+func ParseRunOnErrBody(input string) (*RunOnErrBody, error) {
 	parts := strings.Fields(input)
 
-	if len(parts) < 3 {
+	if len(parts) < 2 {
 		return nil, fmt.Errorf("invalid input: %s", input)
 	}
 
-	notificationType := parts[0]
-	phoneID := parts[1]
-
-	switch notificationType {
-	case "msg":
-		return &Notify{
-			Type:       notificationType,
-			PhoneID:    phoneID,
-			MessageIDs: parts[2:],
-		}, nil
-	case "err":
-		return &Notify{
-			Type:      notificationType,
-			PhoneID:   phoneID,
-			ErrorType: parts[2],
-		}, nil
-	case "call":
-		return &Notify{
-			Type:    notificationType,
-			PhoneID: phoneID,
-			CallArg: parts[2:],
-		}, nil
-	default:
-		return nil, fmt.Errorf("unknown notification type: %s", notificationType)
-	}
+	return &RunOnErrBody{
+		PhoneID:  parts[0],
+		ErrorArg: parts[1:],
+	}, nil
 }
 
-func CreateNotifyScript(scriptPath, appHttpPort string) error {
+type RunOnMsgBody struct {
+	PhoneID    string // IMSI of SIM card
+	MessageIDs []string
+}
+
+func ParseRunOnMsgBody(input string) (*RunOnMsgBody, error) {
+	parts := strings.Fields(input)
+
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("invalid input: %s", input)
+	}
+
+	return &RunOnMsgBody{
+		PhoneID:    parts[0],
+		MessageIDs: parts[1:],
+	}, nil
+}
+
+func CreateRunOnScript(scriptPath, appHttpPort, notifyType string) error {
 	parts := []string{
 		"#!/bin/bash",
 		"args=\"$@\"",
-		"curl -d \"$args\" http://localhost:" + appHttpPort + "/notify",
+		"curl -d \"$args\" http://localhost:" + appHttpPort + "/run-on/" + notifyType,
 	}
 	content := strings.Join(parts, "\n")
 
