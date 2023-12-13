@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	gammu "github.com/justficks/gogammu"
 	"log/slog"
+	"time"
 )
 
 type Handler struct {
@@ -58,6 +59,8 @@ func (h *Handler) RunOnError(c *fiber.Ctx) error {
 		return c.Status(400).SendString(err.Error())
 	}
 
+	time.Sleep(5 * time.Second)
+
 	err = h.Gammu.Run(modem)
 	if err != nil {
 		log.Error("Run gammu-smsd error", err)
@@ -75,21 +78,23 @@ func (h *Handler) RunOnMessage(c *fiber.Ctx) error {
 
 	body := string(c.Body()) // "123456789012345 msgId1 msgId2 ... msgIdN"
 
-	log.Info("Income body", body)
+	log.Info("Income body", slog.String("body", body))
 
 	notify, err := gammu.ParseRunOnMsgBody(body)
 	if err != nil {
-		log.Error("Parse body error", err)
+		log.Error("Parse body error", slog.Any("err", err))
 		return c.Status(400).SendString(err.Error())
 	}
 
 	newMsg, err := h.Gammu.ConcatSMS(notify)
 	if err != nil {
+		log.Error("Concat SMS", slog.Any("err", err))
 		return fiber.NewError(400, err.Error())
 	}
 
 	err = h.Gammu.OnMsgCallback(newMsg)
 	if err != nil {
+		log.Error("Run callback OnMsgCallback", slog.Any("err", err))
 		return fiber.NewError(400, err.Error())
 	}
 
