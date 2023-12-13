@@ -231,7 +231,7 @@ func (g *Gammu) Run(m *Modem) error {
 		g.Store.SetModemError(m.Num, err.Error())
 		return err
 	}
-	if network.NetworkState == "not logged into network" || network.NetworkState == "request to network denied" {
+	if network.NetworkState == "not logged into network" || network.NetworkState == "request to network denied" || network.NetworkState == "registration to network denied" {
 		g.Store.SetModemStatus(m.Num, NetworkError)
 		g.Store.SetModemError(m.Num, "Registration to network error")
 		return fmt.Errorf("registration to network error")
