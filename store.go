@@ -76,6 +76,17 @@ func (s *Store) SetModemsIdentify(modems []ModemIdentify) {
 	for _, i := range modems {
 		if modem, ok := s.modems[i.ModemNumber]; ok {
 
+			// Проверка на одинаковый IMEI или IMSI
+			if i.IMEI != "" || i.IMSI != "" {
+				for _, m := range s.modems {
+					if m.IMEI == i.IMEI || m.IMSI == i.IMSI {
+						modem.Status = Error
+						modem.Error = "Duplicate IMEI or IMSI detected"
+						continue
+					}
+				}
+			}
+
 			if i.Error != "" {
 				if i.ErrorCode == 114 {
 					modem.Status = NoSIM
