@@ -2,10 +2,11 @@ package api
 
 import (
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	gammu "github.com/justficks/gogammu"
 	"log/slog"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	gammu "github.com/justficks/gogammu"
 )
 
 type Handler struct {
@@ -34,17 +35,22 @@ func (h *Handler) RunOnError(c *fiber.Ctx) error {
 
 	body := string(c.Body()) // "123456789012345 INIT"
 
-	log.Info("Income body", body)
+	log.Info("Income body", slog.String("body", body))
+
+	err := h.Gammu.OnErrorCallback(body)
+	if err != nil {
+		log.Error("Run callback OnErrorCallback", slog.Any("err", err))
+	}
 
 	notify, err := gammu.ParseRunOnErrBody(body)
 	if err != nil {
-		log.Error("Parse body error", err)
+		log.Error("Parse body error", slog.Any("err", err))
 		return c.Status(400).SendString(err.Error())
 	}
 
 	modem, isExist := h.Gammu.Store.GetModemByIMSI(notify.PhoneID)
 	if !isExist {
-		log.Error("Modem not found", notify.PhoneID)
+		log.Error("Modem not found", slog.String("PhoneID", notify.PhoneID))
 		return c.Status(400).SendString(fmt.Sprintf("Modem %s not found", notify.PhoneID))
 	}
 
@@ -55,7 +61,7 @@ func (h *Handler) RunOnError(c *fiber.Ctx) error {
 
 	err = h.Gammu.Stop(modem.IMSI)
 	if err != nil {
-		log.Error("Stop gammu-smsd error", err)
+		log.Error("Stop gammu-smsd error", slog.Any("err", err))
 		return c.Status(400).SendString(err.Error())
 	}
 
@@ -63,7 +69,7 @@ func (h *Handler) RunOnError(c *fiber.Ctx) error {
 
 	err = h.Gammu.Run(modem)
 	if err != nil {
-		log.Error("Run gammu-smsd error", err)
+		log.Error("Run gammu-smsd error", slog.Any("err", err))
 		return c.Status(400).SendString(err.Error())
 	}
 

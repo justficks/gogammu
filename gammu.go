@@ -28,7 +28,8 @@ type Gammu struct {
 	RunOnErrScript  string
 	RunOnCallScript string
 
-	OnMsgCallback func(msg *NewMsg) error
+	OnMsgCallback   func(msg *NewMsg) error
+	OnErrorCallback func(text string) error
 
 	Store *Store
 	DB    *pg.DB
@@ -45,7 +46,8 @@ type ConfigNewGammu struct {
 	DbPass string
 	DbName string
 
-	OnMsgCallback func(msg *NewMsg) error
+	OnMsgCallback   func(msg *NewMsg) error
+	OnErrorCallback func(text string) error
 
 	Logger *slog.Logger
 }
@@ -111,7 +113,8 @@ func NewGammu(cfg ConfigNewGammu) (*Gammu, error) {
 		RunOnErrScript:  runOnScripts["err"],
 		RunOnCallScript: runOnScripts["call"],
 
-		OnMsgCallback: cfg.OnMsgCallback,
+		OnMsgCallback:   cfg.OnMsgCallback,
+		OnErrorCallback: cfg.OnErrorCallback,
 
 		Store: GetStore(),
 		DB:    DbConnection,
